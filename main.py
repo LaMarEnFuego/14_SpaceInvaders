@@ -32,7 +32,7 @@ player.setheading(90)
 playerspeed = 15
 
 # Choose the number of enemies
-number_of_enemies = 5
+number_of_enemies = 10
 enemies = []
 
 # Add enemies to the list
@@ -53,25 +53,31 @@ for enemy in enemies:
     y = enemy_start_y
     enemy.setposition(x, y)
     enemy_number += 1
+    if enemy_number == 5:
+        enemy_start_y -= 50
+        enemy_number = 0
 
 enemyspeed = 2
 
-# Create the player's bullet
-bullet = turtle.Turtle()
-bullet.color("yellow")
-bullet.shape("triangle")
-bullet.penup()
-bullet.speed(0)
-bullet.setheading(90)
-bullet.shapesize(0.5, 0.5)
-bullet.hideturtle()
+# Create the player's bullets
+bullets = []
+for _ in range(2):
+    bullet = turtle.Turtle()
+    bullet.color("yellow")
+    bullet.shape("triangle")
+    bullet.penup()
+    bullet.speed(0)
+    bullet.setheading(90)
+    bullet.shapesize(0.5, 0.5)
+    bullet.hideturtle()
+    bullets.append(bullet)
 
 bulletspeed = 20
 
 # Define bullet state
 # ready - ready to fire
 # fire - bullet is firing
-bulletstate = "ready"
+bulletstates = ["ready", "ready"]
 
 # Create obstacles
 obstacles = []
@@ -105,17 +111,24 @@ def move_right():
     player.setx(x)
 
 def fire_bullet():
-    global bulletstate
-    if bulletstate == "ready":
-        bulletstate = "fire"
-        x = player.xcor()
-        y = player.ycor() + 10
-        bullet.setposition(x, y)
-        bullet.showturtle()
+    for i in range(len(bullets)):
+        if bulletstates[i] == "ready":
+            bulletstates[i] = "fire"
+            x = player.xcor()
+            y = player.ycor() + 10
+            bullets[i].setposition(x, y)
+            bullets[i].showturtle()
+            break
 
 def is_collision(t1, t2):
     distance = ((t1.xcor() - t2.xcor()) ** 2 + (t1.ycor() - t2.ycor()) ** 2) ** 0.5
     return distance < 15
+
+def check_win():
+    for enemy in enemies:
+        if enemy.isvisible():
+            return False
+    return True
 
 # Keyboard bindings
 turtle.listen()
@@ -126,36 +139,48 @@ turtle.onkey(fire_bullet, "space")
 # Main game loop
 while True:
     for enemy in enemies:
-        x = enemy.xcor()
-        x += enemyspeed
-        enemy.setx(x)
+        if enemy.isvisible():
+            x = enemy.xcor()
+            x += enemyspeed
+            enemy.setx(x)
 
-        if enemy.xcor() > 280 or enemy.xcor() < -280:
-            for e in enemies:
-                y = e.ycor()
-                y -= 40
-                e.sety(y)
-            enemyspeed *= -1
+            if enemy.xcor() > 280 or enemy.xcor() < -280:
+                for e in enemies:
+                    y = e.ycor()
+                    y -= 40
+                    e.sety(y)
+                enemyspeed *= -1
 
-        if is_collision(bullet, enemy):
-            bullet.hideturtle()
-            bulletstate = "ready"
-            bullet.setposition(0, -400)
-            enemy.setposition(0, 10000)
+            if is_collision(player, enemy):
+                player.hideturtle()
+                enemy.hideturtle()
+                print("Game Over")
+                break
 
-        if is_collision(player, enemy):
-            player.hideturtle()
-            enemy.hideturtle()
-            print("Game Over")
-            break
+    for i in range(len(bullets)):
+        if bulletstates[i] == "fire":
+            y = bullets[i].ycor()
+            y += bulletspeed
+            bullets[i].sety(y)
 
-    if bulletstate == "fire":
-        y = bullet.ycor()
-        y += bulletspeed
-        bullet.sety(y)
+        if bullets[i].ycor() > 275:
+            bullets[i].hideturtle()
+            bulletstates[i] = "ready"
 
-    if bullet.ycor() > 275:
-        bullet.hideturtle()
-        bulletstate = "ready"
+        for enemy in enemies:
+            if is_collision(bullets[i], enemy):
+                bullets[i].hideturtle()
+                bulletstates[i] = "ready"
+                bullets[i].setposition(0, -400)
+                enemy.hideturtle()
+
+    if check_win():
+        win_pen = turtle.Turtle()
+        win_pen.color("white")
+        win_pen.penup()
+        win_pen.hideturtle()
+        win_pen.setposition(0, 0)
+        win_pen.write("YOU WIN", align="center", font=("Arial", 36, "normal"))
+        break
 
 turtle.done()
